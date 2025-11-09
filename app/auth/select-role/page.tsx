@@ -6,53 +6,55 @@ import { useRouter } from 'next/navigation';
 import { Kanban, Users, Shield } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
-export default function LoginPage() {
-    const { isAuthenticated, user } = useAuth();
+/**
+ * Role Selection Page
+ * Shown to users after first OAuth login to set their role
+ */
+export default function SelectRolePage() {
+    const { user } = useAuth();
     const router = useRouter();
     const [role, setRole] = useState<'user' | 'admin'>('user');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const supabase = createClient();
 
-    // Redirect if already authenticated
+    // Check if user already has a role set
     useEffect(() => {
-        if (isAuthenticated && user) {
+        if (user?.role) {
+            // User already has a role, redirect to appropriate dashboard
             if (user.role === 'admin') {
                 router.push('/admin');
             } else {
                 router.push('/user');
             }
         }
-    }, [isAuthenticated, user, router]);
+    }, [user, router]);
 
-    const handleGoogleSignIn = async () => {
+    const handleSetRole = async () => {
         try {
             setIsLoading(true);
             setError(null);
 
-            // Store selected role in localStorage to set after OAuth callback
-            localStorage.setItem('pending_role', role);
-
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: `${window.location.origin}/auth/callback?next=${role === 'admin' ? '/admin' : '/user'}`,
-                    queryParams: {
-                        access_type: 'offline',
-                        prompt: 'consent',
-                    },
-                },
+            // Update user metadata with selected role
+            const { error: updateError } = await supabase.auth.updateUser({
+                data: {
+                    role: role,
+                }
             });
 
-            if (error) {
-                console.error('OAuth error:', error);
-                setError(error.message);
-                setIsLoading(false);
+            if (updateError) {
+                throw updateError;
             }
-            // If no error, user will be redirected to Google
-        } catch (err) {
-            console.error('Sign in error:', err);
-            setError('Failed to initiate Google sign in');
+
+            // Redirect based on selected role
+            if (role === 'admin') {
+                router.push('/admin');
+            } else {
+                router.push('/user');
+            }
+        } catch (err: any) {
+            console.error('Error setting role:', err);
+            setError(err.message || 'Failed to set role');
             setIsLoading(false);
         }
     };
@@ -67,9 +69,9 @@ export default function LoginPage() {
                             <Kanban className="w-7 h-7 text-blue-600" />
                         </div>
                         <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                            Kanban Board
+                            Welcome!
                         </h1>
-                        <p className="text-slate-600 text-sm">Sign in with Google to get started</p>
+                        <p className="text-slate-600 text-sm">Choose your role to continue</p>
                     </div>
 
                     {/* Error Message */}
@@ -112,39 +114,19 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    {/* Google Sign In Button */}
+                    {/* Continue Button */}
                     <button
-                        onClick={handleGoogleSignIn}
+                        onClick={handleSetRole}
                         disabled={isLoading}
-                        className="w-full px-4 py-3 bg-white border-2 border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-700 rounded-lg font-semibold flex items-center justify-center gap-3 transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isLoading ? (
                             <>
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-700"></div>
-                                <span>Redirecting to Google...</span>
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                <span>Setting up...</span>
                             </>
                         ) : (
-                            <>
-                                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                                    <path
-                                        fill="#4285F4"
-                                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                    />
-                                    <path
-                                        fill="#34A853"
-                                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                    />
-                                    <path
-                                        fill="#FBBC05"
-                                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                                    />
-                                    <path
-                                        fill="#EA4335"
-                                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                                    />
-                                </svg>
-                                <span>Continue with Google</span>
-                            </>
+                            <span>Continue</span>
                         )}
                     </button>
 
@@ -169,11 +151,6 @@ export default function LoginPage() {
                         )}
                     </div>
                 </div>
-
-                {/* Footer */}
-                <p className="text-center text-slate-500 text-xs mt-6">
-                    Powered by Supabase • Secured with Google OAuth
-                </p>
             </div>
         </div>
     );
