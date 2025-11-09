@@ -2,6 +2,100 @@
 
 This guide explains how to set up and use the invite-only authentication system that has been integrated into your Kanban application.
 
+
+# Supabase Setup Checklist
+## 1. Create a Supabase Project (5 minutes)
+Go to https://supabase.com
+Sign up or log in
+Click "New Project"
+Fill in:
+Name: kanban-board (or whatever you prefer)
+Database Password: Generate a secure password (save it somewhere safe)
+Region: Choose the one closest to you
+Click "Create new project"
+Wait ~2 minutes for it to provision
+2. Get Your API Credentials (1 minute)
+In your Supabase project dashboard, click the ⚙️ Settings icon (bottom left sidebar)
+Go to API section
+You'll see two important values:
+Project URL - looks like https://abcdefghijk.supabase.co
+anon public key - a long JWT token starting with eyJhbGc...
+Copy both of these
+Put them in your .env.local file:
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-url.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+3. Enable Google OAuth Provider (2 minutes)
+In Supabase dashboard, go to Authentication (left sidebar)
+Click Providers
+Find Google in the list
+Click to expand it
+Toggle the switch to Enable
+Don't save yet! You need Google credentials first...
+4. Get Google OAuth Credentials (5 minutes)
+A. Create Google Cloud Project
+Go to https://console.cloud.google.com
+Click project dropdown (top) → New Project
+Name: Kanban Board
+Click Create
+
+B. Configure OAuth Consent Screen
+Left sidebar: APIs & Services → OAuth consent screen
+Choose External (unless you have Google Workspace)
+Click Create
+Fill in:
+App name: Kanban Board
+User support email: Your email
+Developer contact email: Your email
+Click Save and Continue (skip scopes, just keep clicking through)
+C. Create OAuth Client
+Left sidebar: APIs & Services → Credentials
+Click + Create Credentials → OAuth client ID
+Application type: Web application
+Name: Kanban Board Web Client
+Authorized redirect URIs - Click + Add URI and paste:
+https://YOUR-PROJECT-ID.supabase.co/auth/v1/callback
+⚠️ IMPORTANT: Replace YOUR-PROJECT-ID with your actual Supabase project ID from step 2 Example: If your URL is https://abcdefghijk.supabase.co, then use:
+https://abcdefghijk.supabase.co/auth/v1/callback
+Click Create
+Copy the Client ID and Client Secret that appear
+
+5. Add Google Credentials to Supabase (1 minute)
+Go back to Supabase dashboard → Authentication → Providers → Google
+Paste:
+Client ID (from Google)
+Client Secret (from Google)
+Click Save
+6. Configure Redirect URLs (1 minute)
+Still in Supabase, go to Authentication → URL Configuration
+Under Redirect URLs, add:
+http://localhost:3000/**
+Click Save
+
+
+# Phase 1: Supabase Configuration
+## 1.1 Disable Public Signups
+In Supabase Dashboard → Authentication → Settings
+Toggle OFF "Allow new users to sign up"
+This prevents unauthorized Google OAuth signups
+## 1.2 Create Database Schema Create two new tables in Supabase SQL Editor: Table 1: profiles - Extended user information
+Links to auth.users via user ID
+Stores role (user/admin), status, invitation timestamps
+Automatically created when user accepts invite (via trigger)
+Table 2: invitations - Track all sent invitations
+Stores email, invited_by, status (pending/accepted/expired)
+Has expiration date (default 30 days)
+Allows admins to resend or revoke invitations
+### 1.3 Set Up Row Level Security (RLS)
+Enable RLS on both tables
+Admins can: view all, create invitations, update/delete invitations
+Users can: view only their own profile
+Non-invited users: cannot access anything
+### 1.4 Create Database Trigger
+Auto-create profile when user accepts invitation
+Copies metadata from auth.users to profiles table
+Sets initial role based on invitation dat
+
 ## 🎯 What's Been Implemented
 
 Your app now has an **invite-only** authentication system where:
