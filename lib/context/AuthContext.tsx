@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, AuthContextType } from '@/lib/types';
 import { createClient } from '@/utils/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -11,6 +12,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const supabase = createClient();
+    const router = useRouter();
 
     // Convert Supabase user to our User type
     const mapSupabaseUserToUser = (supabaseUser: SupabaseUser): User => {
@@ -81,8 +83,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const logout = async () => {
-        await supabase.auth.signOut();
-        setUser(null);
+        try {
+            await supabase.auth.signOut();
+            setUser(null);
+            // Redirect to select-role page after logout
+            router.push('/auth/select-role');
+        } catch (error) {
+            console.error('Error during logout:', error);
+            // Still redirect even if there's an error
+            router.push('/auth/select-role');
+        }
     };
 
     const value: AuthContextType = {
