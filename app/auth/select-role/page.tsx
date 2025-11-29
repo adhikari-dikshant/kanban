@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Kanban, Users, Shield } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
@@ -11,7 +10,6 @@ import { createClient } from '@/utils/supabase/client';
  * Shown to users after first OAuth login to set their role
  */
 export default function SelectRolePage() {
-    const { user } = useAuth();
     const router = useRouter();
     const [role, setRole] = useState<'user' | 'admin'>('user');
     const [isLoading, setIsLoading] = useState(false);
@@ -20,20 +18,45 @@ export default function SelectRolePage() {
 
     // Check if user already has a role set
     useEffect(() => {
-        if (user?.role) {
-            // User already has a role, redirect to appropriate dashboard
-            if (user.role === 'admin') {
-                router.push('/admin');
-            } else {
-                router.push('/user');
+        const checkUserRole = async () => {
+            try {
+                const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+                if (!currentUser) {
+                    // No session found, redirect to login
+                    router.push('/auth/login');
+                    return;
+                }
+
+                if (currentUser.user_metadata?.role) {
+                    // User already has a role, redirect to appropriate dashboard
+                    if (currentUser.user_metadata.role === 'admin') {
+                        router.push('/admin');
+                    } else {
+                        router.push('/user');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking user role:', error);
             }
-        }
-    }, [user, router]);
+        };
+
+        checkUserRole();
+    }, [supabase, router]);
 
     const handleSetRole = async () => {
         try {
             setIsLoading(true);
             setError(null);
+
+            // Get current user
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+            if (!currentUser) {
+                setError('No user session found');
+                setIsLoading(false);
+                return;
+            }
 
             // Update user metadata with selected role
             const { error: updateError } = await supabase.auth.updateUser({
@@ -46,15 +69,19 @@ export default function SelectRolePage() {
                 throw updateError;
             }
 
+            // Small delay to ensure metadata is updated
+            await new Promise(resolve => setTimeout(resolve, 500));
+
             // Redirect based on selected role
             if (role === 'admin') {
                 router.push('/admin');
             } else {
                 router.push('/user');
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('Error setting role:', err);
-            setError(err.message || 'Failed to set role');
+            const errorMessage = err instanceof Error ? err.message : 'Failed to set role';
+            setError(errorMessage);
             setIsLoading(false);
         }
     };
@@ -89,11 +116,10 @@ export default function SelectRolePage() {
                                 type="button"
                                 onClick={() => setRole('user')}
                                 disabled={isLoading}
-                                className={`p-4 rounded-lg border-2 font-medium transition-all flex flex-col items-center gap-2 ${
-                                    role === 'user'
-                                        ? 'border-blue-500 bg-blue-50 text-blue-600'
-                                        : 'border-slate-300 bg-slate-50 text-slate-600 hover:border-slate-400 hover:bg-slate-100'
-                                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`p-4 rounded-lg border-2 font-medium transition-all flex flex-col items-center gap-2 ${role === 'user'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-600'
+                                    : 'border-slate-300 bg-slate-50 text-slate-600 hover:border-slate-400 hover:bg-slate-100'
+                                    } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <Users className="w-5 h-5" />
                                 <span className="text-xs md:text-sm">User</span>
@@ -102,11 +128,10 @@ export default function SelectRolePage() {
                                 type="button"
                                 onClick={() => setRole('admin')}
                                 disabled={isLoading}
-                                className={`p-4 rounded-lg border-2 font-medium transition-all flex flex-col items-center gap-2 ${
-                                    role === 'admin'
-                                        ? 'border-blue-500 bg-blue-50 text-blue-600'
-                                        : 'border-slate-300 bg-slate-50 text-slate-600 hover:border-slate-400 hover:bg-slate-100'
-                                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`p-4 rounded-lg border-2 font-medium transition-all flex flex-col items-center gap-2 ${role === 'admin'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-600'
+                                    : 'border-slate-300 bg-slate-50 text-slate-600 hover:border-slate-400 hover:bg-slate-100'
+                                    } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <Shield className="w-5 h-5" />
                                 <span className="text-xs md:text-sm">Admin</span>

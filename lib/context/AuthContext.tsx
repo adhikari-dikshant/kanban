@@ -32,10 +32,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const { data: { session } } = await supabase.auth.getSession();
 
                 if (session?.user) {
-                    setUser(mapSupabaseUserToUser(session.user));
+                    const mappedUser = mapSupabaseUserToUser(session.user);
+                    setUser(mappedUser);
+                } else {
+                    setUser(null);
                 }
             } catch (error) {
                 console.error('Error initializing auth:', error);
+                setUser(null);
             } finally {
                 setLoading(false);
             }
@@ -48,7 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             data: { subscription },
         } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
-                setUser(mapSupabaseUserToUser(session.user));
+                const mappedUser = mapSupabaseUserToUser(session.user);
+                setUser(mappedUser);
             } else {
                 setUser(null);
             }
@@ -58,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => {
             subscription.unsubscribe();
         };
-    }, []);
+    }, [supabase]);
 
     // Login function - now just for updating metadata, actual OAuth happens in login page
     const login = async (newUser: User) => {
