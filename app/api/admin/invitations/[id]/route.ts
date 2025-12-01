@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server'
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // 1. Verify the requester is an admin
@@ -35,7 +35,8 @@ export async function DELETE(
       )
     }
 
-    const { id: invitationId } = await params
+    const params = await context.params
+    const invitationId = params.id
 
     // 2. Get the invitation
     const { data: invitation, error: fetchError } = await supabase
@@ -110,7 +111,7 @@ export async function DELETE(
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // 1. Verify the requester is an admin
@@ -138,7 +139,8 @@ export async function PATCH(
       )
     }
 
-    const { id: invitationId } = await params
+    const params = await context.params
+    const invitationId = params.id
 
     // 2. Get the invitation
     const { data: invitation, error: fetchError } = await supabase
