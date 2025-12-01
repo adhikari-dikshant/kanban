@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Initialize user from Supabase session
     useEffect(() => {
         let mounted = true;
-        let subscription: ReturnType<typeof supabase.auth.onAuthStateChange> | null = null;
+        let subscription: any = null;
         let initializationComplete = false;
         let pendingAuthStateChange: { event: string; session: any } | null = null;
 
@@ -167,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
         });
 
-        subscription = authSubscription;
+        subscription = authSubscription as any;
 
         return () => {
             mounted = false;

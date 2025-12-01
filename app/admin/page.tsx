@@ -294,12 +294,7 @@ export default function AdminPage() {
                 )}
 
                 {/* Invite User Modal */}
-                {showInviteModal && (
-                    <InviteUser
-                        onClose={() => setShowInviteModal(false)}
-                        onInvite={handleInviteUser}
-                    />
-                )}
+                <InviteUser />
             </main>
         </div>
     );
